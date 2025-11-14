@@ -11,6 +11,9 @@ import {
   DemoModeBadge,
 } from "@/common";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+import { MiniPlayer } from "@/components/ui/MiniPlayer";
+import { QueuePanel } from "@/components/ui/QueuePanel";
+import { useAudioPlayerContext } from "@/context/audioPlayerContext";
 
 import "react-loading-skeleton/dist/skeleton.css";
 import "swiper/css";
@@ -18,8 +21,9 @@ import "swiper/css";
 const Home = lazy(() => import("./pages/Home"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const App = () => {
+const AppContent = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const audioPlayer = useAudioPlayerContext();
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -62,9 +66,56 @@ const App = () => {
         }}
       />
 
+      {/* Queue Panel - rendered at root level for proper positioning */}
+      <QueuePanel
+        isOpen={audioPlayer.isQueueOpen}
+        onClose={audioPlayer.closeQueuePanel}
+        queue={audioPlayer.queue}
+        currentTrack={audioPlayer.currentTrack}
+        currentQueueIndex={audioPlayer.currentQueueIndex}
+        isPlaying={audioPlayer.isPlaying}
+        onRemoveTrack={audioPlayer.removeFromQueue}
+        onReorderQueue={audioPlayer.reorderQueue}
+        onPlayTrack={audioPlayer.playTrack}
+        onClearQueue={audioPlayer.clearQueue}
+      />
+
+      {/* Mini Player */}
+      <MiniPlayer
+        currentTrack={audioPlayer.currentTrack}
+        isPlaying={audioPlayer.isPlaying}
+        progress={audioPlayer.progress}
+        volume={audioPlayer.volume}
+        isShuffled={audioPlayer.isShuffled}
+        repeatMode={audioPlayer.repeatMode}
+        isMinimized={audioPlayer.isMinimized}
+        onTogglePlay={audioPlayer.togglePlay}
+        onSkipPrevious={audioPlayer.skipPrevious}
+        onSkipNext={audioPlayer.skipNext}
+        onSeek={audioPlayer.seek}
+        onVolumeChange={audioPlayer.setVolume}
+        onToggleShuffle={audioPlayer.toggleShuffle}
+        onToggleRepeat={audioPlayer.toggleRepeat}
+        onToggleFavorite={audioPlayer.toggleFavorite}
+        onToggleMinimize={audioPlayer.toggleMinimize}
+        queue={audioPlayer.queue}
+        currentQueueIndex={audioPlayer.currentQueueIndex}
+        onRemoveFromQueue={audioPlayer.removeFromQueue}
+        onReorderQueue={audioPlayer.reorderQueue}
+        onPlayTrack={audioPlayer.playTrack}
+        onClearQueue={audioPlayer.clearQueue}
+        isQueueOpen={audioPlayer.isQueueOpen}
+        onOpenQueue={audioPlayer.openQueuePanel}
+        onCloseQueue={audioPlayer.closeQueuePanel}
+      />
+
       <Footer />
     </>
   );
+};
+
+const App = () => {
+  return <AppContent />;
 };
 
 export default App;

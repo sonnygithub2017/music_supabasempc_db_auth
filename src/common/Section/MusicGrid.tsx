@@ -1,6 +1,7 @@
 import { FC, useState } from "react";
 import { TrackCard } from "@/components/ui/TrackCard";
 import { ITrack } from "@/types";
+import { useAudioPlayerContext } from "@/context/audioPlayerContext";
 
 interface MusicGridProps {
   tracks: ITrack[];
@@ -22,10 +23,15 @@ const MusicGrid: FC<MusicGridProps> = ({
   hasMoreContent = false
 }) => {
   const [visibleCount, setVisibleCount] = useState(initialDisplayCount);
+  const { playTrack, addToQueue, currentTrack, openQueuePanel } = useAudioPlayerContext();
 
   const handlePlay = (track: ITrack) => {
-    console.log('🎵 Track clicked (audio player removed):', track.name || track.title);
-    // Audio player functionality removed - this is now just a visual music browser
+    playTrack(track);
+  };
+
+  const handleAddToQueue = (track: ITrack) => {
+    addToQueue(track);
+    openQueuePanel(); // Open queue panel when adding a track
   };
 
   const handleLoadMoreClick = () => {
@@ -53,8 +59,9 @@ const MusicGrid: FC<MusicGridProps> = ({
             <TrackCard
               track={track}
               category={category}
-              isPlaying={false}
+              isPlaying={currentTrack?.id === track.id}
               onPlay={handlePlay}
+              onAddToQueue={handleAddToQueue}
               variant="detailed"
             />
           </div>

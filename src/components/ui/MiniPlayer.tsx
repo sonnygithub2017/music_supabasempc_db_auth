@@ -12,7 +12,8 @@ import {
   FiHeart,
   FiMoreHorizontal,
   FiMinimize2,
-  FiMaximize2
+  FiMaximize2,
+  FiList
 } from 'react-icons/fi';
 import { ITrack } from '@/types';
 import { getImageUrl, cn } from '@/utils';
@@ -36,6 +37,16 @@ interface MiniPlayerProps {
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
   className?: string;
+  // Queue props
+  queue?: ITrack[];
+  currentQueueIndex?: number;
+  onRemoveFromQueue?: (trackId: string) => void;
+  onReorderQueue?: (fromIndex: number, toIndex: number) => void;
+  onPlayTrack?: (track: ITrack) => void;
+  onClearQueue?: () => void;
+  isQueueOpen?: boolean;
+  onOpenQueue?: () => void;
+  onCloseQueue?: () => void;
 }
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({
@@ -55,13 +66,28 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   onToggleFavorite,
   isMinimized = false,
   onToggleMinimize,
-  className
+  className,
+  queue = [],
+  currentQueueIndex = -1,
+  onRemoveFromQueue,
+  onReorderQueue,
+  onPlayTrack,
+  onClearQueue,
+  isQueueOpen: isQueueOpenProp = false,
+  onOpenQueue,
+  onCloseQueue,
 }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [localProgress, setLocalProgress] = useState(progress);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [localQueueOpen, setLocalQueueOpen] = useState(false);
+
+  // Use prop if provided, otherwise use local state as fallback
+  const isQueueOpen = onOpenQueue ? isQueueOpenProp : localQueueOpen;
+  const handleOpenQueue = onOpenQueue || (() => setLocalQueueOpen(true));
+  const handleCloseQueue = onCloseQueue || (() => setLocalQueueOpen(false));
 
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -71,8 +97,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       setLocalProgress(progress);
     }
   }, [progress, isDragging]);
-
-  if (!currentTrack) return null;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -105,11 +129,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     onSeek?.(clampedPercentage);
   };
 
-  const duration = currentTrack.duration || 180000; // Fallback to 3 minutes
-  const currentTime = (localProgress / 100) * duration / 1000;
-  const totalTime = duration / 1000;
+  const duration = currentTrack?.duration || 180000; // Fallback to 3 minutes
+  const currentTime = currentTrack ? (localProgress / 100) * duration / 1000 : 0;
+  const totalTime = currentTrack ? duration / 1000 : 0;
 
-  if (isMinimized) {
+  if (isMinimized && currentTrack) {
     return (
       <div className={cn(
         "fixed bottom-4 right-4 bg-white dark:bg-gray-900 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 p-2 z-50 transition-all duration-300 hover:scale-105",
@@ -142,18 +166,53 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
     );
   }
 
+  // Show minimal player when no track is playing but queue exists, or always show queue button
+  if (!currentTrack) {
+    return (
+      <div className={cn(
+        "fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700 z-40 transition-all duration-300",
+        className
+      )}>
+        <div className="flex items-center justify-end px-4 py-3">
+          {/* Queue button - always visible */}
+          <Button
+            onClick={handleOpenQueue}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "flex items-center justify-center w-10 h-10 transition-colors duration-200 relative",
+              queue.length > 0
+                ? "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            )}
+            title="Queue"
+          >
+            <FiList className="w-5 h-5" />
+            {queue.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {queue.length}
+              </span>
+            )}
+          </Button>
+        </div>
+
+        {/* Queue Panel is now rendered at App level */}
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700 z-40 transition-all duration-300",
       className
     )}>
       {/* Progress bar - full width at top */}
-      <div 
-        className="w-full h-1 bg-gray-200 dark:bg-gray-700 cursor-pointer group" 
+      <div
+        className="w-full h-1 bg-gray-200 dark:bg-gray-700 cursor-pointer group"
         ref={progressRef}
         onClick={handleProgressClick}
       >
-        <div 
+        <div
           className="h-full bg-blue-600 transition-all duration-100 rounded-full relative group-hover:bg-blue-500"
           style={{ width: `${localProgress}%` }}
         >
@@ -181,7 +240,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               </div>
             )}
           </div>
-          
+
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
               {currentTrack.title || currentTrack.name || 'Unknown Track'}
@@ -190,15 +249,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               {currentTrack.artist || 'Unknown Artist'}
             </p>
           </div>
-          
+
           <Button
             onClick={handleFavoriteClick}
             variant="ghost"
             size="icon"
             className={cn(
               "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 hover:scale-110",
-              isFavorite 
-                ? "text-red-500 hover:text-red-600" 
+              isFavorite
+                ? "text-red-500 hover:text-red-600"
                 : "text-gray-400 hover:text-red-500 dark:text-gray-500"
             )}
           >
@@ -215,8 +274,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             size="icon"
             className={cn(
               "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 hover:scale-110",
-              isShuffled 
-                ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" 
+              isShuffled
+                ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20"
                 : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
             )}
           >
@@ -264,8 +323,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
             size="icon"
             className={cn(
               "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 hover:scale-110 relative",
-              repeatMode !== 'off' 
-                ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" 
+              repeatMode !== 'off'
+                ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20"
                 : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
             )}
           >
@@ -284,7 +343,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           </div>
 
           {/* Volume control */}
-          <div 
+          <div
             className="relative"
             onMouseEnter={() => setShowVolumeSlider(true)}
             onMouseLeave={() => setShowVolumeSlider(false)}
@@ -301,18 +360,18 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
                 <FiVolume2 className="w-4 h-4" />
               )}
             </Button>
-            
+
             {/* Volume slider */}
             {showVolumeSlider && (
               <div className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2">
                 <div className="w-20 h-24 flex flex-col items-center">
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{volume}%</div>
                   <div className="flex-1 w-1 bg-gray-200 dark:bg-gray-600 rounded-full relative">
-                    <div 
+                    <div
                       className="w-full bg-blue-600 rounded-full absolute bottom-0"
                       style={{ height: `${volume}%` }}
                     />
-                    <div 
+                    <div
                       className="absolute w-3 h-3 bg-blue-600 rounded-full -ml-1 cursor-pointer"
                       style={{ bottom: `${volume}%`, marginBottom: '-6px' }}
                     />
@@ -321,6 +380,27 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
               </div>
             )}
           </div>
+
+          {/* Queue button */}
+          <Button
+            onClick={handleOpenQueue}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "flex items-center justify-center w-8 h-8 transition-colors duration-200 relative",
+              queue.length > 0
+                ? "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            )}
+            title="Queue"
+          >
+            <FiList className="w-4 h-4" />
+            {queue.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {queue.length}
+              </span>
+            )}
+          </Button>
 
           {/* More options */}
           <Button
@@ -342,6 +422,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Queue Panel is now rendered at App level */}
     </div>
   );
 };

@@ -21,6 +21,17 @@ interface AudioPlayerContextType {
   toggleFavorite: () => void;
   toggleMinimize: () => void;
   closePlayer: () => void;
+  // Queue operations
+  queue: ITrack[];
+  currentQueueIndex: number;
+  addToQueue: (track: ITrack) => void;
+  removeFromQueue: (trackId: string) => void;
+  reorderQueue: (fromIndex: number, toIndex: number) => void;
+  clearQueue: () => void;
+  // Queue panel control
+  isQueueOpen: boolean;
+  openQueuePanel: () => void;
+  closeQueuePanel: () => void;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);

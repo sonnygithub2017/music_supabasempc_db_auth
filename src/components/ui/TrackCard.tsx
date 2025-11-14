@@ -3,14 +3,17 @@ import { Card, CardContent } from './card';
 import {
   FaClock
 } from 'react-icons/fa';
+import { FiPlus, FiMoreVertical } from 'react-icons/fi';
 import { ITrack } from '@/types';
 import { getImageUrl, cn } from '@/utils';
+import { Button } from './button';
 
 interface TrackCardProps {
   track: ITrack;
   category: string;
   isPlaying?: boolean;
   onPlay?: (track: ITrack) => void;
+  onAddToQueue?: (track: ITrack) => void;
   variant?: 'compact' | 'detailed' | 'featured';
   className?: string;
 }
@@ -20,11 +23,14 @@ export const TrackCard: React.FC<TrackCardProps> = ({
   category: _category,
   isPlaying: _isPlayingProp,
   onPlay: _onPlayProp,
+  onAddToQueue,
   variant = 'detailed',
   className
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showAddedFeedback, setShowAddedFeedback] = useState(false);
 
   const { poster_path, original_title: title, name, artist, album, duration } = track;
   const displayTitle = title || name || 'Unknown Track';
@@ -36,12 +42,30 @@ export const TrackCard: React.FC<TrackCardProps> = ({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddToQueue) {
+      onAddToQueue(track);
+      setShowAddedFeedback(true);
+      setTimeout(() => setShowAddedFeedback(false), 2000);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowContextMenu(true);
+  };
+
+  const handleClickOutside = () => {
+    setShowContextMenu(false);
+  };
+
 
   const cardHeight = variant === 'compact' ? 'h-52' : variant === 'featured' ? 'h-84' : 'h-80';
   const imageHeight = variant === 'compact' ? 160 : variant === 'featured' ? 240 : 200;
 
   return (
-    <Card 
+    <Card
       className={cn(
         "group relative transition-all duration-300 ease-out overflow-hidden",
         "hover:scale-[1.03] hover:-translate-y-2 cursor-pointer",
@@ -53,7 +77,11 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         className
       )}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setShowContextMenu(false);
+      }}
+      onContextMenu={handleContextMenu}
     >
       {/* Main Content */}
       <div className="block relative h-full">
@@ -61,10 +89,10 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         <div className="relative overflow-hidden rounded-lg mb-3">
           {/* Loading skeleton */}
           {!imageLoaded && (
-            <div className="absolute inset-0 bg-gray-200 dark:bg-hover-gray animate-pulse rounded-lg" 
+            <div className="absolute inset-0 bg-gray-200 dark:bg-hover-gray animate-pulse rounded-lg"
                  style={{ height: imageHeight }} />
           )}
-          
+
           {/* Album artwork */}
           <img
             src={getImageUrl(poster_path)}
@@ -86,6 +114,31 @@ export const TrackCard: React.FC<TrackCardProps> = ({
             "absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent transition-opacity duration-300 rounded-lg",
             isHovered ? "opacity-100" : "opacity-0"
           )} />
+
+          {/* Add to Queue button on hover */}
+          {isHovered && onAddToQueue && (
+            <div className="absolute top-2 right-2 z-10">
+              <Button
+                onClick={handleAddToQueue}
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm",
+                  "hover:bg-white dark:hover:bg-gray-800",
+                  "text-gray-900 dark:text-white shadow-lg",
+                  "transition-all duration-200 hover:scale-110",
+                  showAddedFeedback && "bg-green-500 text-white"
+                )}
+                title="Add to Queue"
+              >
+                {showAddedFeedback ? (
+                  <span className="text-xs font-bold">✓</span>
+                ) : (
+                  <FiPlus className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Track information */}
@@ -98,7 +151,7 @@ export const TrackCard: React.FC<TrackCardProps> = ({
           )}>
             {displayTitle}
           </h3>
-          
+
           {/* Artist name */}
           <p className={cn(
             "text-gray-600 dark:text-text-secondary truncate font-medium",
@@ -134,6 +187,42 @@ export const TrackCard: React.FC<TrackCardProps> = ({
         "dark:bg-gradient-to-r dark:from-blue-800 dark:via-slate-600 dark:to-blue-800",
         isHovered && "opacity-10"
       )} />
+
+      {/* Context Menu */}
+      {showContextMenu && onAddToQueue && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={handleClickOutside}
+          />
+          <div className="absolute top-2 right-2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 min-w-[160px]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddToQueue(e);
+                setShowContextMenu(false);
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            >
+              <FiPlus className="w-4 h-4" />
+              Add to Queue
+            </button>
+            {_onPlayProp && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  _onPlayProp(track);
+                  setShowContextMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <FiMoreVertical className="w-4 h-4" />
+                Play Now
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </Card>
   );
 };

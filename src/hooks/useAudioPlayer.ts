@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ITrack } from '@/types';
 import { mcpAudioService, PreviewTrack as _PreviewTrack } from '@/services/MCPAudioService';
+import { useQueue } from './useQueue';
 
 interface AudioPlayerState {
   currentTrack: ITrack | null;
@@ -23,28 +24,83 @@ export const useAudioPlayer = () => {
     isMinimized: false,
   });
 
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
   const simulationInterval = useRef<NodeJS.Timeout | null>(null);
+  const playTrackInternalRef = useRef<((track: ITrack) => Promise<void>) | null>(null);
+  const queueRef = useRef<ITrack[]>([]);
+  const currentQueueIndexRef = useRef<number>(-1);
+  const getNextTrackRef = useRef<(() => ITrack | null) | null>(null);
+  const setCurrentIndexRef = useRef<((index: number) => void) | null>(null);
+  const stateRef = useRef<AudioPlayerState>(state);
+
+  // Queue management
+  const {
+    queue,
+    currentQueueIndex,
+    addToQueue,
+    removeFromQueue,
+    reorderQueue,
+    clearQueue,
+    setCurrentIndex,
+    getNextTrack,
+    getPreviousTrack,
+  } = useQueue();
+
+  // Update refs when queue values change
+  useEffect(() => {
+    queueRef.current = queue;
+    currentQueueIndexRef.current = currentQueueIndex;
+    getNextTrackRef.current = getNextTrack;
+    setCurrentIndexRef.current = setCurrentIndex;
+  }, [queue, currentQueueIndex, getNextTrack, setCurrentIndex]);
+
+  // Update state ref when state changes
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Initialize audio element
   useEffect(() => {
     audioRef.current = new Audio();
-    
+
     const audio = audioRef.current;
-    
+
     const handleEnded = () => {
+      const currentState = stateRef.current;
       setState(prev => ({ ...prev, isPlaying: false, progress: 0 }));
+
+      // Auto-play next track from queue if available
+      const nextTrack = getNextTrackRef.current?.();
+      if (nextTrack && playTrackInternalRef.current) {
+        // Small delay before playing next track
+        setTimeout(() => {
+          playTrackInternalRef.current?.(nextTrack);
+        }, 500);
+      } else if (currentState.repeatMode === 'all' && queueRef.current.length > 0 && playTrackInternalRef.current) {
+        // If repeat all is on and queue has tracks, play first track
+        setTimeout(() => {
+          playTrackInternalRef.current?.(queueRef.current[0]);
+          setCurrentIndexRef.current?.(0);
+        }, 500);
+      } else if (currentState.repeatMode === 'one' && currentState.currentTrack && playTrackInternalRef.current) {
+        // If repeat one is on, replay current track
+        setTimeout(() => {
+          playTrackInternalRef.current?.(currentState.currentTrack!);
+        }, 500);
+      }
     };
-    
+
     const handleLoadStart = () => {
       console.log('Audio loading started');
     };
-    
+
     const handleCanPlay = () => {
       console.log('Audio can start playing');
     };
-    
+
     const handleError = (e: Event) => {
       console.error('Audio error:', e);
       setState(prev => ({ ...prev, isPlaying: false }));
@@ -101,7 +157,8 @@ export const useAudioPlayer = () => {
     };
   }, [state.isPlaying]);
 
-  const playTrack = useCallback(async (track: ITrack) => {
+  // Internal playTrack function that doesn't add to queue
+  const playTrackInternal = useCallback(async (track: ITrack) => {
     console.log('🎵 Playing track:', track.title || track.name);
 
     // Clear any existing simulation interval
@@ -125,6 +182,12 @@ export const useAudioPlayer = () => {
         }
       }
       return;
+    }
+
+    // Find track index in queue and update current index
+    const trackIndex = queue.findIndex(t => t.id === track.id);
+    if (trackIndex !== -1) {
+      setCurrentIndex(trackIndex);
     }
 
     // Set new track immediately for responsive UI
@@ -258,7 +321,40 @@ export const useAudioPlayer = () => {
         }
       }, 250); // Optimized to match real audio progress updates
     }
-  }, [state.currentTrack?.id, state.volume, state.currentTrack?.preview_url, state.isPlaying]); // Added missing dependencies
+  }, [state.currentTrack?.id, state.volume, state.currentTrack?.preview_url, state.isPlaying, queue, setCurrentIndex]); // Added missing dependencies
+
+  // Update playTrackInternal ref
+  useEffect(() => {
+    playTrackInternalRef.current = playTrackInternal;
+  }, [playTrackInternal]);
+
+  // Public playTrack function that adds to queue
+  const playTrack = useCallback(async (track: ITrack) => {
+    // Add track to queue if not already present
+    addToQueue(track);
+
+    // Find track index in queue - need to check after adding
+    setTimeout(() => {
+      const trackIndex = queue.findIndex(t => t.id === track.id);
+      if (trackIndex !== -1) {
+        setCurrentIndex(trackIndex);
+      } else {
+        // If track was just added, it will be at the end
+        setCurrentIndex(queue.length);
+      }
+    }, 0);
+
+    // Play the track
+    await playTrackInternal(track);
+  }, [addToQueue, queue, setCurrentIndex, playTrackInternal]);
+
+  const openQueuePanel = useCallback(() => {
+    setIsQueueOpen(true);
+  }, []);
+
+  const closeQueuePanel = useCallback(() => {
+    setIsQueueOpen(false);
+  }, []);
 
   const togglePlay = useCallback(() => {
     if (!state.currentTrack) return;
@@ -301,18 +397,31 @@ export const useAudioPlayer = () => {
   }, [state.isPlaying, state.currentTrack, state.progress]);
 
   const skipNext = useCallback(() => {
-    console.log('Skip next - not implemented yet');
-    // TODO: Implement next track logic
-  }, []);
+    const nextTrack = getNextTrack();
+    if (nextTrack) {
+      playTrackInternal(nextTrack);
+    } else if (state.repeatMode === 'all' && queue.length > 0) {
+      // If repeat all is on, loop to first track
+      playTrackInternal(queue[0]);
+      setCurrentIndex(0);
+    }
+  }, [getNextTrack, playTrackInternal, state.repeatMode, queue, setCurrentIndex]);
 
   const skipPrevious = useCallback(() => {
-    console.log('Skip previous - not implemented yet');
-    // TODO: Implement previous track logic
-  }, []);
+    const previousTrack = getPreviousTrack();
+    if (previousTrack) {
+      playTrackInternal(previousTrack);
+    } else if (state.repeatMode === 'all' && queue.length > 0) {
+      // If repeat all is on, loop to last track
+      const lastIndex = queue.length - 1;
+      playTrackInternal(queue[lastIndex]);
+      setCurrentIndex(lastIndex);
+    }
+  }, [getPreviousTrack, playTrackInternal, state.repeatMode, queue, setCurrentIndex]);
 
   const seek = useCallback((position: number) => {
     setState(prev => ({ ...prev, progress: position }));
-    
+
     if (audioRef.current && audioRef.current.duration) {
       audioRef.current.currentTime = (position / 100) * audioRef.current.duration;
     }
@@ -320,7 +429,7 @@ export const useAudioPlayer = () => {
 
   const setVolume = useCallback((volume: number) => {
     setState(prev => ({ ...prev, volume }));
-    
+
     if (audioRef.current) {
       audioRef.current.volume = volume / 100;
     }
@@ -353,7 +462,7 @@ export const useAudioPlayer = () => {
       audioRef.current.pause();
       audioRef.current.src = '';
     }
-    
+
     setState({
       currentTrack: null,
       isPlaying: false,
@@ -374,7 +483,7 @@ export const useAudioPlayer = () => {
     isShuffled: state.isShuffled,
     repeatMode: state.repeatMode,
     isMinimized: state.isMinimized,
-    
+
     // Actions
     playTrack,
     togglePlay,
@@ -387,5 +496,17 @@ export const useAudioPlayer = () => {
     toggleFavorite,
     toggleMinimize,
     closePlayer,
+
+    // Queue operations
+    queue,
+    currentQueueIndex,
+    addToQueue,
+    removeFromQueue,
+    reorderQueue,
+    clearQueue,
+    // Queue panel control
+    isQueueOpen,
+    openQueuePanel,
+    closeQueuePanel,
   };
 };
