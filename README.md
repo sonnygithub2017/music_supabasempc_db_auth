@@ -6,11 +6,37 @@
   <br/>
 
   <p >
-A music discovery app built with React and TypeScript. <br/> Browse tracks, albums, and artists using Spotify's API.
+A music discovery app built with React and TypeScript. <br/> Browse tracks, albums, and artists using Spotify's API. <br/> Build playlists with queue management, like your favorite tracks, and create an account to save your preferences.
   </p>
 </div>
 
 <br/>
+<br/>
+
+## Features
+
+### 🎵 Queue Management
+- **Add to Queue**: Click the "+" button on any track card to add it to your queue
+- **Queue Panel**: Slide-in panel from the right side showing your current queue
+- **Drag & Drop**: Reorder tracks by dragging them in the queue panel
+- **Remove Tracks**: Remove individual tracks or clear the entire queue
+- **Auto-play**: Queue integrates with the audio player for seamless playback
+- **Persistence**: Your queue is saved to localStorage and restored when you return
+
+### ❤️ Likes System
+- **Like Tracks**: Click the heart button on track cards to like/unlike tracks
+- **Like Counts**: See how many users have liked each track
+- **User-Specific Likes**: When signed in, your likes are saved to your account
+- **Visual Feedback**: Filled red heart for liked tracks, outline for unliked
+- **Database Storage**: All likes are stored securely in Supabase with track metadata
+
+### 🔐 User Authentication
+- **Sign Up & Sign In**: Create an account or sign in with email and password
+- **User Profiles**: Each user has a profile with username and email
+- **Secure Storage**: User data protected with Row-Level Security (RLS) policies
+- **User Menu**: Access your profile and sign out from the header menu
+- **Persistent Sessions**: Your session persists across page refreshes
+
 <br/>
 
 ## How it works
@@ -54,7 +80,7 @@ The app automatically detects which mode to use.
 
 ## :camera: Screenshots
 
-### Hero Section 
+### Hero Section
 <kbd><img width="800" alt="NextSound Hero Section and Track Grid" src="./src/assets/images/hero.png"></kbd>
 
 <br/>
@@ -104,6 +130,28 @@ Open `http://localhost:5173` - the app works immediately with demo data.
 
 <br/>
 
+### Setting up Supabase (for Likes & Authentication)
+
+To enable likes and user authentication features:
+
+1. Create a [Supabase Account](https://supabase.com/) and create a new project
+2. Get your project URL and anon key from the project settings:
+   - Go to Project Settings → API
+   - Copy the "Project URL" and "anon public" key
+3. Add your Supabase credentials to `.env`:
+   ```env
+   VITE_SUPABASE_URL=your_project_url_here
+   VITE_SUPABASE_ANON_KEY=your_anon_key_here
+   ```
+4. Database tables are automatically created via migrations:
+   - `user_profiles` - Stores user account information
+   - `user_track_likes` - Stores user-specific track likes
+   - Row-Level Security (RLS) policies ensure users can only access their own data
+
+**Note**: The app works without Supabase credentials, but likes and authentication features will be disabled.
+
+<br/>
+
 ## Testing
 
 ```bash
@@ -128,10 +176,12 @@ npm run preview
 ## Tech Stack
 
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
-- **State:** Redux Toolkit with RTK Query
+- **State:** Redux Toolkit with RTK Query, React Context API
 - **Routing:** React Router v6
 - **Animations:** Framer Motion
 - **Backend:** Node.js, Express.js (CORS proxy)
+- **Database:** Supabase (PostgreSQL with Row-Level Security)
+- **Authentication:** Supabase Auth
 - **API:** Spotify Web API
 - **Testing:** Vitest, Playwright
 
@@ -160,6 +210,16 @@ npm run preview
 - **Problem:** TypeScript compilation errors during build
 - **Solution:** Run `npm run build` to see specific error details
 - **Common fix:** Ensure all dependencies are installed (`npm install`)
+
+**Supabase Authentication Errors**
+- **Problem:** "Missing Supabase environment variables" error
+- **Solution:** Ensure `.env` file contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- **Details:** Likes and authentication features require Supabase credentials
+
+**Database Connection Issues**
+- **Problem:** Likes not saving or authentication not working
+- **Solution:** Verify Supabase project is active and credentials are correct
+- **Check:** Ensure database tables (`user_profiles`, `user_track_likes`) exist in your Supabase project
 
 <br/>
 

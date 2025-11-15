@@ -10,9 +10,12 @@ import { Button } from "react-aria-components";
 
 import { ThemeMenu, Logo } from "..";
 import HeaderNavItem from "./HeaderNavItem";
+import { AuthDialog } from "@/components/auth/AuthDialog";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 import { useGlobalContext } from "@/context/globalContext";
 import { useTheme } from "@/context/themeContext";
+import { useAuth } from "@/context/AuthContext";
 import { maxWidth } from "@/styles";
 import { navLinks } from "@/constants";
 import { THROTTLE_DELAY } from "@/utils/config";
@@ -25,9 +28,12 @@ interface HeaderProps {
 const Header = ({ onOpenSearch }: HeaderProps) => {
   const { openMenu, theme, showThemeOptions } = useTheme();
   const { setShowSidebar } = useGlobalContext();
+  const { user, loading: authLoading } = useAuth();
 
   const [isActive, setIsActive] = useState<boolean>(false);
   const [isNotFoundPage, setIsNotFoundPage] = useState<boolean>(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState<boolean>(false);
+  const [authDialogTab, setAuthDialogTab] = useState<'signin' | 'signup'>('signin');
   const location = useLocation();
 
   useEffect(() => {
@@ -120,6 +126,46 @@ const Header = ({ onOpenSearch }: HeaderProps) => {
             </kbd>
           </Button>
 
+          {/* Authentication UI */}
+          {!authLoading && (
+            <>
+              {user ? (
+                <UserMenu />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    onPress={() => {
+                      setAuthDialogTab('signin');
+                      setAuthDialogOpen(true);
+                    }}
+                    className={cn(
+                      "px-4 py-1.5 rounded-full transition-all duration-200 hover:scale-105 text-sm font-medium",
+                      isNotFoundPage || isActive
+                        ? "bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-600"
+                        : "bg-white/10 backdrop-blur-sm text-gray-300 hover:bg-white/20 border border-white/20"
+                    )}
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    onPress={() => {
+                      setAuthDialogTab('signup');
+                      setAuthDialogOpen(true);
+                    }}
+                    className={cn(
+                      "px-4 py-1.5 rounded-full transition-all duration-200 hover:scale-105 text-sm font-medium",
+                      isNotFoundPage || isActive
+                        ? "bg-accent-orange text-white hover:bg-accent-orange/90"
+                        : "bg-accent-orange/80 backdrop-blur-sm text-white hover:bg-accent-orange"
+                    )}
+                  >
+                    Sign Up
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+
           <div className="button relative">
             <button
               name="theme-menu"
@@ -155,6 +201,13 @@ const Header = ({ onOpenSearch }: HeaderProps) => {
           <AiOutlineMenu />
         </button>
       </nav>
+
+      {/* Auth Dialog */}
+      <AuthDialog
+        open={authDialogOpen}
+        onOpenChange={setAuthDialogOpen}
+        initialTab={authDialogTab}
+      />
     </header>
   );
 };

@@ -93,6 +93,8 @@ export interface ITrack {
   year?: number; // Release year for search
   // Legacy properties for backward compatibility
   title?: string;
+  // Like feature
+  likeCount?: number; // Current like count for the track
 }
 
 export interface IAlbum {
