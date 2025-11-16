@@ -22,6 +22,26 @@ A music discovery app built with React and TypeScript. <br/> Browse tracks, albu
 - **Remove Tracks**: Remove individual tracks or clear the entire queue
 - **Auto-play**: Queue integrates with the audio player for seamless playback
 - **Persistence**: Your queue is saved to localStorage and restored when you return
+- **Queue Indicator**: Visual badge showing the number of tracks in your queue
+
+### 🎧 Audio Player
+- **Full-Featured Mini Player**: Fixed bottom player with track information and controls
+- **Playback Controls**: Play, pause, skip next/previous, seek through tracks
+- **Shuffle Mode**: Randomize track order in your queue
+- **Repeat Modes**: Off, repeat one track, or repeat all tracks
+- **Volume Control**: Adjustable volume with mute functionality
+- **Progress Tracking**: Visual progress bar with click-to-seek functionality
+- **Minimize/Maximize**: Collapse player to a compact floating button
+- **Spotify Preview URLs**: Plays 30-second previews when available via Spotify API
+- **Visual Feedback**: Audio visualizer dots when playing, animated progress indicators
+
+### 🔍 Command Palette
+- **Quick Search**: Press `Cmd+K` (Mac) or `Ctrl+K` (Windows/Linux) to open search
+- **Spotify Integration**: Search across millions of tracks, albums, and artists
+- **Recent Items**: Quick access to recently searched or played items
+- **Keyboard Navigation**: Arrow keys to navigate, Enter to select, ESC to close
+- **Smart Results**: Shows exact matches and recommendations
+- **Type Filtering**: Search results categorized by tracks, albums, artists, and playlists
 
 ### ❤️ Likes System
 - **Like Tracks**: Click the heart button on track cards to like/unlike tracks
@@ -29,6 +49,7 @@ A music discovery app built with React and TypeScript. <br/> Browse tracks, albu
 - **User-Specific Likes**: When signed in, your likes are saved to your account
 - **Visual Feedback**: Filled red heart for liked tracks, outline for unliked
 - **Database Storage**: All likes are stored securely in Supabase with track metadata
+- **Persistent Likes**: Your liked tracks persist across sessions when authenticated
 
 ### 🔐 User Authentication
 - **Sign Up & Sign In**: Create an account or sign in with email and password
@@ -36,6 +57,19 @@ A music discovery app built with React and TypeScript. <br/> Browse tracks, albu
 - **Secure Storage**: User data protected with Row-Level Security (RLS) policies
 - **User Menu**: Access your profile and sign out from the header menu
 - **Persistent Sessions**: Your session persists across page refreshes
+- **Avatar Support**: User avatars with fallback to initials
+
+### 🎨 Theme Support
+- **Dark & Light Modes**: Toggle between dark and light themes
+- **Persistent Theme**: Your theme preference is saved
+- **System Integration**: Respects system preferences (future enhancement)
+
+### 🎯 Music Discovery
+- **Hero Section**: Featured tracks with carousel display
+- **Multiple Sections**: Browse popular tracks, latest releases, and more
+- **Track Cards**: Beautiful card-based UI with album artwork
+- **Artist Information**: View artist names and album details
+- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 
 <br/>
 
@@ -114,11 +148,11 @@ Open `http://localhost:5173` - the app works immediately with demo data.
 
 1. Create a [Spotify Developer Account](https://developer.spotify.com/) and create a new app
 2. Get your Client ID and Client Secret from the app dashboard
-3. Copy `.env.example` to `.env`:
+3. Create a `.env` file in the root directory:
    ```bash
-   cp .env.example .env
+   touch .env
    ```
-4. Add your credentials to `.env` (remove the # comments):
+4. Add your credentials to `.env`:
    ```env
    VITE_SPOTIFY_CLIENT_ID=your_client_id_here
    VITE_SPOTIFY_CLIENT_SECRET=your_client_secret_here
@@ -127,6 +161,8 @@ Open `http://localhost:5173` - the app works immediately with demo data.
    ```bash
    npm run dev:full
    ```
+
+   This will start both the backend server (port 3001) and frontend dev server (port 5173) concurrently.
 
 <br/>
 
@@ -152,23 +188,23 @@ To enable likes and user authentication features:
 
 <br/>
 
-## Testing
+## Available Scripts
 
 ```bash
-# Run tests
-npm test
+# Development
+npm run dev              # Start frontend dev server only (port 5173)
+npm run dev:full         # Start both backend and frontend servers concurrently
+npm run server           # Start backend server only (port 3001)
+npm run server:dev       # Start backend server with nodemon (auto-reload)
 
-# Run with coverage
-npm run test:coverage
-```
+# Production
+npm run build            # Build for production
+npm run preview          # Preview production build
+npm start                # Start production server (backend + preview)
 
-<br/>
-
-## Build
-
-```bash
-npm run build
-npm run preview
+# Testing
+npm test                 # Run tests (if configured)
+npm run test:coverage    # Run tests with coverage (if configured)
 ```
 
 <br/>
@@ -179,11 +215,14 @@ npm run preview
 - **State:** Redux Toolkit with RTK Query, React Context API
 - **Routing:** React Router v6
 - **Animations:** Framer Motion
-- **Backend:** Node.js, Express.js (CORS proxy)
+- **UI Components:** Radix UI, React Aria Components, shadcn/ui
+- **Icons:** Lucide React, React Icons, Untitled UI Icons
+- **Backend:** Node.js, Express.js (CORS proxy for Spotify API)
 - **Database:** Supabase (PostgreSQL with Row-Level Security)
 - **Authentication:** Supabase Auth
-- **API:** Spotify Web API
-- **Testing:** Vitest, Playwright
+- **API:** Spotify Web API (with preview URL support via MCP Audio Service)
+- **Audio:** HTML5 Audio API with preview URL integration
+- **Testing:** Vitest, Playwright (if configured)
 
 <br>
 
@@ -199,7 +238,7 @@ npm run preview
 **Missing Environment Variables**
 - **Problem:** App shows "No music data available" or API errors
 - **Solution:** Check that `.env` file exists with valid Spotify credentials
-- **Reference:** See `SPOTIFY_SETUP.md` for obtaining API credentials
+- **Note:** The app works in demo mode without Spotify credentials, but with limited functionality
 
 **Port Conflicts**
 - **Frontend (Port 5173):** Check if another Vite/dev server is running
@@ -224,8 +263,9 @@ npm run preview
 <br/>
 
 ### Getting Help
-- See `SPOTIFY_SETUP.md` for API setup guidance
-- [Reach out to the NextWork community to ask your question!](https://community.nextwork.org/c/i-have-a-question/)
+- Check the [Spotify Developer Dashboard](https://developer.spotify.com/) for API setup
+- Review Supabase documentation for database setup
+- Ensure all required environment variables are set in your `.env` file
 
 ---
 
